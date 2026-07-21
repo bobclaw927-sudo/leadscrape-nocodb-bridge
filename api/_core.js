@@ -133,23 +133,57 @@ const TABLE_SCHEMAS = {
     },
   },
 
-  // bizfinder-scans base — company scan/enrichment table. Only name/website/
-  // email/niche overlap with LeadScrape exports; other columns are populated
-  // by the scanner. No "Source" column here, so sourceField is omitted.
+  // bizfinder-scans base — company table. Maps the LeadScrape *Companies*
+  // export 1:1 into leads_cam's LeadScrape columns (scanner columns like
+  // niche/http_status/traffic are left for the scanner pipeline).
+  // `domain` (+ business_name) is the association key: leads_cam.domain
+  // matches contacts.domain, linking a company to all its contacts.
+  // No "Source" column here, so sourceField is omitted.
   "leads_cam": {
     tableId: "m519s9qprpspt70",
-    dedupField: "business_name",
+    dedupField: "domain",
     dedupSecondary: "website",
     fieldMap: {
-      "business name":    "business_name",
-      "company":          "business_name",
-      "name":             "business_name",
-      "website":          "website",
-      "url":              "website",
-      "final url":        "final_url",
-      "email":            "email",
-      "category":         "niche",
-      "niche":            "niche",
+      "business":             "business_name",
+      "business name":        "business_name",
+      "company":              "business_name",
+      "name":                 "business_name",
+      "street":               "street",
+      "city":                 "city",
+      "state":                "state",
+      "postcode":             "postcode",
+      "zip":                  "postcode",
+      "country":              "country",
+      "phone":                "phone",
+      "website":              "website",
+      "url":                  "website",
+      "email":                "email",
+      "domain":               "domain",
+      "categories":           "categories",
+      "category":             "categories",
+      "description":          "description",
+      "employees":            "employees",
+      "founded":              "founded",
+      "linkedin":             "linkedin",
+      "facebook":             "facebook",
+      "x":                    "x_twitter",
+      "x/twitter":            "x_twitter",
+      "twitter":              "x_twitter",
+      "instagram":            "instagram",
+      "youtube":              "youtube",
+      "gmb claimed":          "gmb_claimed",
+      "owner id":             "owner_id",
+      "owner title":          "owner_title",
+      "lat":                  "lat",
+      "lng":                  "lng",
+      "semrush keywords":     "semrush_keywords",
+      "semrush kw traffic":   "semrush_kw_traffic",
+      "semrush traffic cost": "semrush_traffic_cost",
+      "semrush rank":         "semrush_rank",
+      "contact first name":   "contact_first_name",
+      "contact last name":    "contact_last_name",
+      "contact role":         "contact_role",
+      "contact email":        "contact_email",
     },
   },
 
