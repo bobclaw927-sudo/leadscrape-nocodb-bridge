@@ -163,6 +163,7 @@ const TABLE_SCHEMAS = {
       "category":             "categories",
       "description":          "description",
       "employees":            "employees",
+      "numemployees":         "employees",
       "founded":              "founded",
       "linkedin":             "linkedin",
       "facebook":             "facebook",
@@ -197,7 +198,9 @@ const TABLE_SCHEMAS = {
     dedupSecondary: "linkedin",
     fieldMap: {
       "first name":   "first_name",
+      "firstname":    "first_name",
       "last name":    "last_name",
+      "lastname":     "last_name",
       "role":         "role",
       "job title":    "role",
       "title":        "role",
@@ -213,6 +216,7 @@ const TABLE_SCHEMAS = {
       "category":     "categories",
       "revenue":      "revenue",
       "employees":    "employees",
+      "numemployees": "employees",
       "founded":      "founded",
       "domain":       "domain",
       "website":      "domain",
@@ -238,11 +242,16 @@ function env(name, fallback = "") {
   return process.env[name] ?? fallback;
 }
 
-/** Normalise a lead key for matching against our fieldMap */
+/** Normalise a lead key for matching against our fieldMap.
+ * Punctuation/underscores become spaces (not removed) so DB-style keys like
+ * "owner_title" / "gmb_claimed" match the space-separated fieldMap keys
+ * ("owner title" / "gmb claimed"). Concatenated names with no separator
+ * (firstname, numemployees) still need explicit aliases in the fieldMap. */
 function normaliseKey(raw) {
   return String(raw)
     .toLowerCase()
-    .replace(/[^a-z0-9 /]+/g, "")
+    .replace(/[^a-z0-9 /]+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -250,6 +259,25 @@ function normaliseKey(raw) {
 function mapField(rawKey, fieldMap) {
   const key = normaliseKey(rawKey);
   return fieldMap[key] ?? null;
+}
+
+/** Pull the array of lead objects out of whatever envelope the caller sent:
+ *   - a bare array of leads:            [ {...}, {...} ]
+ *   - the leadscrape-mcp sync envelope: { count, leads: [ {...} ] }
+ *     (contacts endpoint sends the same shape; also accept {contacts|records|data})
+ *   - a single lead object:             { business: "...", ... }
+ * Without this, an envelope like { leads:[...] } was treated as ONE lead, so
+ * buildRecord iterated the keys "count"/"leads" and mapped nothing — every
+ * column (business_name included) landed null. */
+function extractItems(body) {
+  if (Array.isArray(body)) return body;
+  if (body && typeof body === "object") {
+    if (Array.isArray(body.leads)) return body.leads;
+    if (Array.isArray(body.contacts)) return body.contacts;
+    if (Array.isArray(body.records)) return body.records;
+    if (Array.isArray(body.data)) return body.data;
+  }
+  return [body];
 }
 
 /** Build the NocoDB record body from the LeadScrape payload */
@@ -398,8 +426,8 @@ async function processWebhook(req, res, options = {}) {
   // NocoDB v2 records API addresses tables by ID, not display name.
   const apiTable = schema.tableId || tableName;
 
-  // Support both single object and array payloads
-  const items = Array.isArray(req.body) ? req.body : [req.body];
+  // Unwrap array / single-object / {leads:[...]} envelope into a flat lead list.
+  const items = extractItems(req.body);
   log("info", `Received ${items.length} ${itemLabel}(s)`, { table: tableName });
 
   const results = [];
@@ -456,4 +484,4 @@ async function processWebhook(req, res, options = {}) {
   return res.status(200).json({ summary, results });
 }
 
-module.exports = { processWebhook, TABLE_SCHEMAS };
+module.exports = { processWebhook, TABLE_SCHEMAS, buildRecord, extractItems };
