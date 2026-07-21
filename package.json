@@ -1,0 +1,12 @@
+{
+  "name": "leadscrape-nocodb-bridge",
+  "version": "1.0.0",
+  "description": "Webhook bridge from LeadScrape to NocoDB — dedup-aware, field-mappable, runs on Vercel",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel deploy --prod",
+    "test": "node --test api/__tests__/webhook.test.js"
+  },
+  "dependencies": {}
+}
