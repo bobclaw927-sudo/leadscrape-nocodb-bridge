@@ -4,6 +4,10 @@
       "memory": 256,
       "maxDuration": 30
     },
+    "api/contacts.js": {
+      "memory": 256,
+      "maxDuration": 30
+    },
     "api/health.js": {
       "memory": 128,
       "maxDuration": 10

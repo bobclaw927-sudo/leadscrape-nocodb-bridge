@@ -150,7 +150,7 @@ describe("handler", () => {
 describe("TABLE_SCHEMAS", () => {
   // We can't access the internal const, so we verify by reading the source
   it("should contain known table entries", () => {
-    const src = fs.readFileSync(path.join(__dirname, "..", "webhook.js"), "utf8");
+    const src = fs.readFileSync(path.join(__dirname, "..", "_core.js"), "utf8");
     const tables = [
       "Home Services Marketers",
       "Lead Generation Agencies",
@@ -163,7 +163,7 @@ describe("TABLE_SCHEMAS", () => {
   });
 
   it("should have a dedupField and fieldMap per entry", () => {
-    const src = fs.readFileSync(path.join(__dirname, "..", "webhook.js"), "utf8");
+    const src = fs.readFileSync(path.join(__dirname, "..", "_core.js"), "utf8");
     const patterns = ["dedupField", "fieldMap", "dedupSecondary"];
     for (const p of patterns) {
       const count = (src.match(new RegExp(p, "g")) || []).length;
