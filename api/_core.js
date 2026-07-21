@@ -144,10 +144,13 @@ const TABLE_SCHEMAS = {
     dedupField: "domain",
     dedupSecondary: "website",
     fieldMap: {
-      "business":             "business_name",
-      "business name":        "business_name",
-      "company":              "business_name",
-      "name":                 "business_name",
+      // NocoDB column is titled "Business" (capital B), NOT "business_name" —
+      // inserts to a non-existent column are silently dropped, so the company
+      // name landed null. Map every name variant to the real column.
+      "business":             "Business",
+      "business name":        "Business",
+      "company":              "Business",
+      "name":                 "Business",
       "street":               "street",
       "city":                 "city",
       "state":                "state",
