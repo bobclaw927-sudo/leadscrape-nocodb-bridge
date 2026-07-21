@@ -1,37 +1,58 @@
 @echo off
-cd /d "C:\Users\Nicole\leadscrape-nocodb-bridge"
+setlocal enabledelayedexpansion
 
-:: Initialize git if not already a repo
+set "REPO_DIR=C:\Users\Nicole\leadscrape-nocodb-bridge"
+set "GITHUB_USER=bobclaw927-sudo"
+set "REPO_NAME=leadscrape-nocodb-bridge"
+set "PAT=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"
+
+cd /d "%REPO_DIR%"
+
 if not exist ".git" (
     echo Initializing git repository...
     git init
-    git branch -M main
 )
 
-:: Set remote URL with authentication
-git remote remove origin 2>nul
-git remote add origin https://bobclaw927-sudo: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@github.com/bobclaw927-sudo/leadscrape-nocodb-bridge.git
+REM Always force the local branch to be 'main'
+echo Checking out main branch...
+git checkout -B main >nul 2>&1
 
-:: Add all files
-echo Adding files...
-git add -A
+echo Adding all files...
+git add -A >nul 2>&1
 
-:: Commit
 echo Committing...
-git commit -m "Full project with CommonJS fix for Vercel"
+git commit -m "Full project with CommonJS fix for Vercel" >nul 2>&1
+if errorlevel 1 (
+    echo Nothing new to commit, continuing with existing commits...
+)
 
-:: Push
-echo Pushing to GitHub...
-git push -u origin main
+echo Setting up remote with PAT...
+git remote remove origin >nul 2>&1
+git remote add origin https://%PAT%@github.com/%GITHUB_USER%/%REPO_NAME%.git
 
-:: Clean the PAT from remote URL after push
-git remote set-url origin https://github.com/bobclaw927-sudo/leadscrape-nocodb-bridge.git
+echo Force pushing to GitHub...
+git push origin main --force
+
+if errorlevel 1 (
+    echo.
+    echo FAILED. Check the error above.
+    echo.
+    pause
+    exit /b 1
+)
+
+echo Cleaning up PAT from remote...
+git remote set-url origin https://github.com/%GITHUB_USER%/%REPO_NAME%.git
 
 echo.
-if %errorlevel% equ 0 (
-    echo SUCCESS: Code pushed! Vercel will auto-deploy.
-) else (
-    echo FAILED. Check the error above.
-)
+echo ========================================
+echo  SUCCESS: Code pushed to GitHub!
+echo ========================================
+echo.
+echo Vercel will auto-deploy shortly.
+echo Webhook URL: https://%REPO_NAME%.vercel.app/api/webhook
+echo.
+echo IMPORTANT: Revoke your PAT at:
+echo   https://github.com/settings/tokens
 echo.
 pause
