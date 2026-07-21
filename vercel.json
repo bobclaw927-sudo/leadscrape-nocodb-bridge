@@ -3,6 +3,13 @@
     "api/webhook.js": {
       "memory": 256,
       "maxDuration": 30
+<<<<<<< HEAD
+=======
+    },
+    "api/health.js": {
+      "memory": 128,
+      "maxDuration": 10
+>>>>>>> 2e206ef (Full project with CommonJS fix for Vercel)
     }
   }
 }
