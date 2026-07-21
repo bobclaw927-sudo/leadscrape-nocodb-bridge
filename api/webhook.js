@@ -251,11 +251,39 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed \u2014 POST only" });
   }
 
-  // Verify webhook secret
+  // Verify webhook secret.
+  // Accept it from any of: X-Webhook-Secret header, Authorization (Bearer or raw),
+  // or a ?secret= / ?token= query param — so it works regardless of how the
+  // sender (e.g. LeadScrape's test button) is able to attach credentials.
   const expectedSecret = env("WEBHOOK_SECRET");
-  if (expectedSecret && req.headers["x-webhook-secret"] !== expectedSecret) {
-    log("warn", "Unauthorized webhook attempt", { ip: req.headers["x-forwarded-for"] });
-    return res.status(401).json({ error: "Invalid webhook secret" });
+  if (expectedSecret) {
+    const authHeader = req.headers["authorization"] || "";
+    const bearer = authHeader.replace(/^Bearer\s+/i, "");
+
+    // req.query is populated by Vercel; fall back to parsing the URL ourselves.
+    let query = req.query || {};
+    if (!req.query && req.url && req.url.includes("?")) {
+      query = Object.fromEntries(new URLSearchParams(req.url.split("?")[1]));
+    }
+
+    const candidates = [
+      req.headers["x-webhook-secret"],
+      bearer,
+      authHeader,
+      query.secret,
+      query.token,
+    ].filter(Boolean);
+
+    if (!candidates.includes(expectedSecret)) {
+      log("warn", "Unauthorized webhook attempt", {
+        ip: req.headers["x-forwarded-for"],
+        sawHeader: !!req.headers["x-webhook-secret"],
+        sawAuth: !!req.headers["authorization"],
+        sawQuery: !!(query.secret || query.token),
+        headerKeys: Object.keys(req.headers || {}),
+      });
+      return res.status(401).json({ error: "Invalid webhook secret" });
+    }
   }
 
   // Validate required env vars
