@@ -4,33 +4,44 @@ setlocal enabledelayedexpansion
 set "REPO_DIR=C:\Users\Nicole\leadscrape-nocodb-bridge"
 set "GITHUB_USER=bobclaw927-sudo"
 set "REPO_NAME=leadscrape-nocodb-bridge"
-set "PAT=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"
 
 cd /d "%REPO_DIR%"
 
-if not exist ".git" (
-    echo Initializing git repository...
-    git init
+REM Remove old .git if it exists (previous attempts had secret in history)
+if exist ".git" (
+    echo Removing old git history (contained a secret)...
+    rd /s /q ".git"
 )
 
-REM Always force the local branch to be 'main'
-echo Checking out main branch...
-git checkout -B main >nul 2>&1
+echo.
+echo ========================================
+echo  LeadScrape -> NocoDB Webhook Deployer
+echo ========================================
+echo.
+echo Enter your GitHub Personal Access Token
+echo (will NOT be saved to disk):
+set /p "PAT=> "
+
+if "%PAT%"=="" (
+    echo ERROR: PAT cannot be empty.
+    pause
+    exit /b 1
+)
+
+echo Initializing fresh git repository...
+git init
+git checkout -B main
 
 echo Adding all files...
-git add -A >nul 2>&1
+git add -A
 
 echo Committing...
-git commit -m "Full project with CommonJS fix for Vercel" >nul 2>&1
-if errorlevel 1 (
-    echo Nothing new to commit, continuing with existing commits...
-)
+git commit -m "LeadScrape to NocoDB webhook bridge"
 
-echo Setting up remote with PAT...
-git remote remove origin >nul 2>&1
+echo Setting up remote...
 git remote add origin https://%PAT%@github.com/%GITHUB_USER%/%REPO_NAME%.git
 
-echo Force pushing to GitHub...
+echo Pushing to GitHub...
 git push origin main --force
 
 if errorlevel 1 (
@@ -41,7 +52,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Cleaning up PAT from remote...
+REM Clean PAT from remote URL
 git remote set-url origin https://github.com/%GITHUB_USER%/%REPO_NAME%.git
 
 echo.
@@ -52,7 +63,7 @@ echo.
 echo Vercel will auto-deploy shortly.
 echo Webhook URL: https://%REPO_NAME%.vercel.app/api/webhook
 echo.
-echo IMPORTANT: Revoke your PAT at:
+echo IMPORTANT: Revoke the old PAT at:
 echo   https://github.com/settings/tokens
 echo.
 pause
