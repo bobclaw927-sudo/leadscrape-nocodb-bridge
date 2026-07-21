@@ -8,6 +8,8 @@
 const TABLE_SCHEMAS = {
 
   "Home Services Marketers": {
+    tableId: "mx7al6strc5s0t6",
+    sourceField: "Source",
     dedupField: "Company_Name",
     dedupSecondary: "Website",
     fieldMap: {
@@ -42,6 +44,8 @@ const TABLE_SCHEMAS = {
   },
 
   "Lead Generation Agencies \u2013 E-commerce & Shopify": {
+    tableId: "mideig6gh1d557h",
+    sourceField: "Source",
     dedupField: "Agency_Name",
     dedupSecondary: "Website",
     fieldMap: {
@@ -65,6 +69,8 @@ const TABLE_SCHEMAS = {
   },
 
   "Shopify Store Owners": {
+    tableId: "ma9h83yoxal7jz3",
+    sourceField: "Source",
     dedupField: "Full_Name",
     dedupSecondary: "Business_Email",
     fieldMap: {
@@ -96,6 +102,8 @@ const TABLE_SCHEMAS = {
   },
 
   "Business Owner & Entrepreneur Influencers": {
+    tableId: "mlq5w35uonep3eg",
+    sourceField: "Source",
     dedupField: "Full_Name",
     dedupSecondary: "Company_Name",
     fieldMap: {
@@ -118,6 +126,26 @@ const TABLE_SCHEMAS = {
       "instagram":        "Instagram_URL",
       "youtube":          "YouTube_URL",
       "tiktok":           "TikTok_URL",
+    },
+  },
+
+  // bizfinder-scans base — scan/enrichment table. Only name/website/email/niche
+  // overlap with LeadScrape exports; other columns are populated by the scanner.
+  // No "Source" column here, so sourceField is intentionally omitted.
+  "leads_cam": {
+    tableId: "m519s9qprpspt70",
+    dedupField: "business_name",
+    dedupSecondary: "website",
+    fieldMap: {
+      "business name":    "business_name",
+      "company":          "business_name",
+      "name":             "business_name",
+      "website":          "website",
+      "url":              "website",
+      "final url":        "final_url",
+      "email":            "email",
+      "category":         "niche",
+      "niche":            "niche",
     },
   },
 
@@ -159,7 +187,10 @@ function buildRecord(lead, schema) {
   const record = {};
   const { fieldMap } = schema;
 
-  record.Source = "LeadScrape";
+  // Only stamp a source column if this table actually has one
+  if (schema.sourceField) {
+    record[schema.sourceField] = "LeadScrape";
+  }
 
   for (const [rawKey, rawValue] of Object.entries(lead)) {
     if (rawValue === undefined || rawValue === null || rawValue === "") continue;
@@ -228,7 +259,7 @@ module.exports = async function handler(req, res) {
   }
 
   // Validate required env vars
-  const baseUrl = env("NOCODB_URL");
+  const baseUrl = env("NOCODB_URL").replace(/\/+$/, "");
   const token = env("NOCODB_API_TOKEN");
   const tableName = env("NOCODB_TABLE");
 
@@ -254,6 +285,10 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: `Unknown table: "${tableName}". Supported: ${Object.keys(TABLE_SCHEMAS).join(", ")}` });
   }
 
+  // NocoDB v2 records API addresses tables by ID, not display name.
+  // Prefer the schema's tableId; fall back to the configured value.
+  const apiTable = schema.tableId || tableName;
+
   // Support both single object and array payloads
   const leads = Array.isArray(req.body) ? req.body : [req.body];
   log("info", `Received ${leads.length} lead(s)`, { table: tableName });
@@ -274,12 +309,12 @@ module.exports = async function handler(req, res) {
     let duplicate = false;
 
     if (dedupValue) {
-      const existing = await findExisting(tableName, schema.dedupField, dedupValue, token, baseUrl);
+      const existing = await findExisting(apiTable, schema.dedupField, dedupValue, token, baseUrl);
       duplicate = existing && existing.length > 0;
     }
 
     if (!duplicate && dedupSecondary && schema.dedupSecondary) {
-      const existing = await findExisting(tableName, schema.dedupSecondary, dedupSecondary, token, baseUrl);
+      const existing = await findExisting(apiTable, schema.dedupSecondary, dedupSecondary, token, baseUrl);
       duplicate = existing && existing.length > 0;
     }
 
@@ -290,7 +325,7 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-      const nocodbResult = await insertRecord(tableName, record, token, baseUrl);
+      const nocodbResult = await insertRecord(apiTable, record, token, baseUrl);
       log("info", "Lead inserted", { id: nocodbResult.Id });
       results.push({ status: "created", id: nocodbResult.Id });
     } catch (err) {
